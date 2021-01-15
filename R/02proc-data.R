@@ -137,7 +137,7 @@ movid$protesta_lag3 <- lag(movid$p1_pra_protesta, n=3)
 
 # 4.Merge data ------------------------------------------------------------
 movid_proc <- movid; remove(movid)
-movid <- left_join(movid, cuarentenas, by=c("comuna", "semana"))
+movid <- left_join(movid_proc, lockdowns, by=c("comuna", "semana"))
 
 # 5. Save  -----------------------------------------------------------------
 saveRDS(lockdowns, "output/data/movid_proc.rds")
