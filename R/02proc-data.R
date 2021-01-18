@@ -8,11 +8,13 @@ movid <- read.csv("input/data/movid19.csv", sep=",",
                   encoding = "UTF-8", stringsAsFactors = F )
 
 ## Lockdowns
-readRDS(lockdowns, "output/data/lockdowns.rds")
+readRDS(lockdowns, "output/data/lockdowns.RDS")
 
 # 3. Recodes -----------------------------------------------------
 
 # ID and sociodemographic --------------------------------------
+
+## Rename
 names(movid)[names(movid) == "fecha_obs"] <- "fecha"
 movid$fecha_ymd <- as.Date(movid$fecha)
 names(movid)[names(movid) == "r2_sexo"] <- "sexo"
@@ -25,12 +27,35 @@ names(movid)[names(movid) == "pr1_wrk_salud"] <- "tra_salud"
 names(movid)[names(movid) == "pr2_prevision"] <- "prev"
 names(movid)[names(movid) == "X.U.FEFF.X.U.FEFF.pob_id"] <- "pob_id"
 
+## Id
+movid$id_pob <- as.numeric(as.factor(movid$pob_id))
+
+## Sex
+movid$sexo <- ifelse(movid$sexo=="Otro",NA,movid$sexo)
+
+## Educ
 movid$edad_3cat <- ifelse(movid$edad<40, "18 a 39",
                           ifelse(movid$edad<65 & movid$edad>39, "40 a 64",
                                  ifelse(movid$edad>64, "65 y más", NA)))
-
+## Week
 movid$semana <- ifelse(movid$semana==15, 16, movid$semana)
 movid$semana0 <- ifelse(movid$semana0==-1, 0, movid$semana0)
+
+## Prev
+
+movid$prev_2categ <- as.factor(ifelse(movid$pr2_prevision=="FONASA",0,
+                                      ifelse(movid$pr2_prevision=="ISAPRE",1,2)))
+levels(movid$prev_2categ) <- c("FONASA","ISAPRE", "Otro")
+
+
+movid$prev_4categ <- as.factor(ifelse(movid$pr2_prevision=="Ninguna",0,
+                                      ifelse(movid$pr2_prevision=="FONASA",1,
+                                             ifelse(movid$pr2_prevision=="ISAPRE",2,3))))
+levels(movid$prev_4categ) <- c("Ninguna","FONASA","ISAPRE", "Otro")
+
+## Work
+movid$trabaja <- ifelse(movid$pr3_ocupacion=="Trabaja de manera remunerada",1,0)
+
 
 # Comuna ------------------------------------------------------------------
 movid$comuna <- chartr('áéíóúñü','aeiounu', movid$comuna)
@@ -134,6 +159,25 @@ movid$voto_lag2 <- lag(movid$voto, n=2)
 movid$voto_lag3 <- lag(movid$voto, n=3)
 movid$protesta_lag2 <- lag(movid$p1_pra_protesta, n=2)
 movid$protesta_lag3 <- lag(movid$p1_pra_protesta, n=3)
+
+
+# Models variables -----------------------------------------------------
+## Dic Salidas
+movid$salidas_dic <- ifelse(movid$salidas>2,1,0)
+## Riesgo ordinal
+movid$per_riesgo_ord <- ifelse(movid$per_riesgo=="Muy en desacuerdo",1,
+                              ifelse(movid$per_riesgo=="En desacuerdo",2,
+                                     ifelse(movid$per_riesgo=="Ni de acuerdo ni en desacuerdo",3,
+                                            ifelse(movid$per_riesgo=="De acuerdo",4,
+                                                   ifelse(movid$per_riesgo=="Muy de acuerdo",5,NA)))))
+### Niveles de riesgo
+movid$alto_riesgo <- ifelse(movid$per_riesgo=="Muy de acuerdo" | movid$per_riesgo=="De acuerdo",1,0)
+movid$bajo_riesgo <- ifelse(movid$per_riesgo=="Muy en desacuerdo" | movid$per_riesgo=="En desacuerdo",1,0)
+
+## Normas
+movid$cumple_normas <- ifelse(movid$normas=="Completamente" | movid$normas=="En gran medida",1,0)
+movid$nocumple_normas <- ifelse(movid$normas=="Nada" | movid$normas=="Poco" | movid$normas=="Algo",1,0)
+
 
 # 4.Merge data ------------------------------------------------------------
 movid_proc <- movid; remove(movid)
