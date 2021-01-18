@@ -157,27 +157,29 @@ movid_i$sintoma <- ifelse((movid_i$s1_snt_fiebre==1 | movid_i$s1_snt_anosmia==1 
 movid_i$sintoma <- ifelse(movid_i$s1_snt_null==1, 0, movid_i$sintoma)
 
 
-
-# Vote --------------------------------------------------------------------
-
-movid_i$voto <- ifelse(movid_i$soc5_voto==1, 1, 0) # Correcion de los Prefiero no contestar
-
-
-# Protest ----------------------------------------------------------------
-
-movid_i <- movid_i %>% mutate(p1_pra_protesta = ifelse(is.na(p1_pra_protesta),0,p1_pra_protesta))
-
-movid_i$voto_lag1 <- lag(movid_i$voto, n=1) #Ver de imputar voto a todos en la semana del plebiscito
-movid_i$protesta_lag1 <- lag(movid_i$p1_pra_protesta, n=1)
-movid_i$voto_lag2 <- lag(movid_i$voto, n=2)
-movid_i$voto_lag3 <- lag(movid_i$voto, n=3)
-movid_i$protesta_lag2 <- lag(movid_i$p1_pra_protesta, n=2)
-movid_i$protesta_lag3 <- lag(movid_i$p1_pra_protesta, n=3)
-
-
 # Models variables -----------------------------------------------------
+
+## 1.  Compliance
+###Aunque a veces no estemos de acuerdo con las autoridades sanitarias y las medidas que se proponen, es nuestro deber seguir sus indicaciones al pie de la letra.
+### En la última semana, ¿con qué frecuencia ha realizado las siguientes acciones para protegerse del coronavirus? Ud. me debe decir si las ha realizado Casi nunca, A veces, Frecuentemente, Casi siempre o Siempre
+
 ## Dic Salidas
-movid_i$salidas_dic <- ifelse(movid_i$salidas>2,1,0)
+#movid_i$salidas_dic <- ifelse(movid_i$salidas>2,1,0)
+
+## 2. Sociodemographic
+# Sex
+# Age
+# Education: 3 categories: High school or less, Technical qualification and University degree
+# Worker (g1 or/type g10)
+# Health risk: arterial hypertension, obesity, diabetes, chronic respiratory diseases (asthma, emphysema or other), cardiovascular diseases, active cancer, chronic kidney disease or immunodeficiencies
+# Lack income due COVID
+# Residency
+# Lockdown
+
+## 3. Instrumental factors
+### A. Perived risk (f6)
+### ¿Qué tan peligroso cree que es el coronavirus para usted y sus cercanos?
+
 ## Riesgo ordinal
 movid_i$per_riesgo_ord <- ifelse(movid_i$per_riesgo=="Muy en desacuerdo",1,
                                ifelse(movid_i$per_riesgo=="En desacuerdo",2,
@@ -188,10 +190,20 @@ movid_i$per_riesgo_ord <- ifelse(movid_i$per_riesgo=="Muy en desacuerdo",1,
 movid_i$alto_riesgo <- ifelse(movid_i$per_riesgo=="Muy de acuerdo" | movid_i$per_riesgo=="De acuerdo",1,0)
 movid_i$bajo_riesgo <- ifelse(movid_i$per_riesgo=="Muy en desacuerdo" | movid_i$per_riesgo=="En desacuerdo",1,0)
 
+## B. Legal enforcement  (f5.5)
+### En Chile, si una persona sale sin permiso durante una cuarentena es muy poco probable que sea controlado y multado.
+
+
+## 4. Normative factors (f8)
+### A. Perceived social norms: Pensando en distintas medidas de cuidado ante el coronavirus (quedarse en casa, usar     mascarilla, mantener distanciamiento social o lavarse las manos). ¿En qué medida diría Ud.     que su círculo cercano (personas que viven con Ud. o su familia cercana) cumple estas     recomendaciones?
+
 ## Normas
 movid_i$cumple_normas <- ifelse(movid_i$normas=="Completamente" | movid_i$normas=="En gran medida",1,0)
 movid_i$nocumple_normas <- ifelse(movid_i$normas=="Nada" | movid_i$normas=="Poco" | movid_i$normas=="Algo",1,0)
 
+### B. Legitimacy (f3.3)
+###Aunque a veces no estemos de acuerdo con las autoridades sanitarias y las medidas que se proponen, es nuestro deber seguir sus indicaciones al pie de la letra.
+###Acuerdo
 
 # 4.Merge data ------------------------------------------------------------
 movid_i_proc <- movid_i; remove(movid_i)
