@@ -186,7 +186,8 @@ movid_i_proc <- movid_i; remove(movid_i)
 
 # 4.1 Select variables ----------------------------------------------------
 
-movid_i_proc <- movid_i_proc %>% select(id_encuesta, sexo, edad, region, comuna, nombre_comuna, nombre_region, factor_expansion, 161:189)
+movid_i_proc <- movid_i_proc %>% filter(a5 == 1) %>% # a5 ==1 solo entrevistados 
+  select(id_encuesta, sexo, edad, region, comuna, nombre_comuna, nombre_region, factor_expansion, 161:189)
 
 # 5. Save  -----------------------------------------------------------------
 saveRDS(movid_i_proc, "output/data/movid_i_proc.RDS")
