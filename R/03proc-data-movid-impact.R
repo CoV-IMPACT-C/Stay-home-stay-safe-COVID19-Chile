@@ -16,7 +16,7 @@ lockdowns <- readRDS("output/data/lockdowns.RDS")
 #- Ver Distribución
 #- Opciones de colapsar
 movid_i <- movid_i %>% mutate_at(vars(contains("f7_")), funs(as.numeric(.)))
-
+table(movid_i$comp_wash, useNA ="ifany")
 movid_i$comp_wash <- car::recode(movid_i$f7_1, c("1='Casi nunca';2='A veces';3='Frecuentemente';4='Casi siempre';5='Siempre';c(8,9)=NA"), as.factor = T,
                             levels = c("Casi nunca", "A veces", "Frecuentemente", "Casi siempre", "Siempre"))
 
