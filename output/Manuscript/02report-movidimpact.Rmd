@@ -1,0 +1,245 @@
+---
+title: "Descriptive Report MOVID-IMPACT survey"
+subtitle: 'Stay home, stay safe: Why are people in Chile not complying with stay-at-home recommendations and restrictions?<br>ANID-COVID N°960 “CoV-IMPACT-C”'
+author: "by Valentina Andrade"
+lang: es-CL
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: yes
+    depth: 2
+    theme: cerulean
+    number_sections: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = F, warning = F, results = 'asis')
+summarytools::st_options(bootstrap.css     = FALSE,       # Already part of the theme so no need for it
+           plain.ascii       = FALSE,       # One of the essential settings
+           style             = "rmarkdown", # Idem.
+           dfSummary.silent  = TRUE,        # Suppresses messages about temporary files
+           footnote          = NA,          # Keeping the results minimalistic
+           subtitle.emphasis = FALSE)       # For the vignette theme, this gives better results.
+#summarytools::st_css()
+
+library(ggplot2); theme_set(theme_classic() + theme(text = element_text(size = 12)))
+library(knitr);  options(knitr.kable.NA = 'No sabe/No responde')
+kable <- function(data) {
+  knitr::kable(data, booktabs = T, digits = 3) %>% kable_styling(latex_options =c("striped", "scale_down"),bootstrap_options = c("striped", "hover", "responsive", "condensed"))
+}
+```
+
+```{r packages, echo = F}
+# 1. Cargar paquetes
+pacman::p_load(tidyverse, kableExtra)
+# 2. Cargar tablas
+movid_i <- readRDS("../../output/data/movid_i_proc.RDS")
+```
+----
+
+# Modelo {-}
+
+El modelo hasta ahora considerado para los datos de MOVID es el siguiente
+
+- Con variable continua
+```{r model-movid, eval = F}
+lmer.simple.int <- lmer(salidas ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * per_riesgo_ord + cuarentenawk_lag1 * cumple_normas +
+                          semana0 + (1 | semana:id_pob), data=data.short)
+```
+
+
+- Con variable binaria 
+```{r model-movid2, eval = F}
+logit.model5 <- glmer(salidas_dic ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * alto_riesgo + cuarentenawk_lag1 * cumple_normas +
+                        semana0 + (1 | id_pob), data=data.short, family = binomial("logit"),
+                      control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5)))
+
+```
+
+En base a los comentarios de los revisores se trabajará con los datos de la nueva encuesta MOVID-IMPACT
+
+# Compliance
+
+- **Ítem**
+En la última semana, ¿con qué frecuencia ha realizado las siguientes acciones para protegerse del coronavirus? Ud. me debe decir si las ha realizado Casi nunca, A veces, Frecuentemente, Casi siempre o Siempre
+
+  - Lavarse las manos durante 20 segundos
+
+```{r wash}
+movid_i %>% group_by(comp_wash) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+  - Mantener al menos dos metros de distancia de personas a su alrededor
+
+```{r distance}
+movid_i %>% group_by(comp_dist) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+  - Evitar reunirse con más de 10 personas en un espacio cerrado
+  
+```{r social}
+movid_i %>% group_by(comp_soc) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+  - Usar mascarilla al salir de su hogar
+
+```{r mask home}
+movid_i %>% group_by(comp_mask) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+  - Usar mascarilla al reunirse con otras personas en un lugar cerrado
+
+```{r mask places}
+movid_i %>% group_by(comp_mask2) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+- ¿Colapsamos las categorías?
+
+# Sociodemographic
+
+```{r descriptive}
+movid_i %>% group_by(sexo) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(educ_3cat) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(educ_3cat) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(prev_4categ) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(cronicos) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(trabaja) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(lack_income) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+
+```
+
+- Age
+
+```{r age}
+summarytools::descr(movid_i, var = edad, stats = "common")
+```
+
+```{r age2}
+movid_i %>% group_by(edad_3cat) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+```
+
+- Residency
+
+  - Regiones
+
+```{r reg}
+movid_i %>%  
+  group_by(region) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+
+```
+ 
+
+  - Comunas de Santiago (está listo pero se quiere ver en relación a cuarentena por si se produce algún sesgo)
+```{r comuna, eval = F}
+movid_i %>% filter(region == 13) %>% 
+  group_by(nombre_comuna) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+```
+
+
+- Lockdown (*se debe solicitar marca temporal para ver en qué Fase están los individuos*)
+
+# Instrumental factors
+
+## A. Perived risk (f6)
+
+- **Ítem**
+
+¿Qué tan peligroso cree que es el coronavirus para usted y sus cercanos?
+
+```{r per_risk}
+movid_i %>% group_by(per_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(high_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(low_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+
+```
+
+## B. Legal enforcement
+
+- **Ítem**
+
+En Chile, si una persona sale sin permiso durante una cuarentena es muy poco probable que sea controlado y multado.
+
+
+```{r leg-inf}
+movid_i %>% group_by(leg_enforce) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+```
+
+
+# Normative factors
+
+## A. Perceived social norms
+
+- **Ítem**
+
+Pensando en distintas medidas de cuidado ante el coronavirus (quedarse en casa, usar     mascarilla, mantener distanciamiento social o lavarse las manos). ¿En qué medida diría Ud. que su círculo cercano (personas que viven con Ud. o su familia cercana) cumple estas recomendaciones?
+
+```{r normas}
+movid_i %>% group_by(normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(cumple_normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+movid_i %>% group_by(nocumple_normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+
+```
+
+## B. Legitimacy
+
+- **Ítem**
+
+Aunque a veces no estemos de acuerdo con las autoridades sanitarias y las medidas que se proponen, es nuestro deber seguir sus indicaciones al pie de la letra.
+
+```{r obedecer}
+movid_i %>% group_by(soc2_obedecer) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+
+```
+
+
+Ahora bien se verá la correlación de `soc2_obedecer` con dos ítems de interés que fueron preguntados en la misma batería:
+
+- `soc1_bienestar`: Las autoridades de gobierno han priorizado el bienestar de la población por sobre otros intereses políticos y económicos
+
+- `soc3_gob`: Aunque a veces no estemos de acuerdo con las autoridades
+sanitarias y las medidas que se proponen, es nuestro deber seguir sus indicaciones al pie de la letra.
+
+
+```{r corr}
+aux <- movid_i %>% select(starts_with("soc")) %>% mutate_at(vars(1:3),funs(as.numeric(.))) 
+
+sjPlot::sjt.corr(aux,
+         triangle = "lower")
+```
+
+
+
+El ítem de interés `soc2_obedecer` tiene una correlación muy baja con el resto de los ítems, mientras que entre ellos existe una correlación media. En consecuencia, solo se debería elegir únicamente el ítem que inicialmente fue definido para medir legitimidad (*soc2_obedecer*). 
