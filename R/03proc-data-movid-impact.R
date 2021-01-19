@@ -4,8 +4,7 @@ pacman::p_load(tidyverse)
 
 # 2. Load data  -------------------------------------------
 ## movid_i-19
-movid_i <- read.csv("input/data/movid_impact.csv", sep=",", 
-                  encoding = "UTF-8", stringsAsFactors = F )
+movid_i <- haven::read_dta("input/data/210118_base_movid_version01.dta")
 
 ## Lockdowns
 readRDS(lockdowns, "output/data/lockdowns.RDS")
@@ -13,65 +12,84 @@ readRDS(lockdowns, "output/data/lockdowns.RDS")
 # 3. Recodes -----------------------------------------------------
 
 # ID and sociodemographic --------------------------------------
-
-## Rename
-names(movid_i)[names(movid_i) == "fecha_obs"] <- "fecha"
-movid_i$fecha_ymd <- as.Date(movid_i$fecha)
-names(movid_i)[names(movid_i) == "a2"] <- "sexo"
-names(movid_i)[names(movid_i) == "a3"] <- "edad"
-names(movid_i)[names(movid_i) == "a4"] <- "jefhogar"
-names(movid_i)[names(movid_i) == "a5"] <- "resp_jefhogar"
-names(movid_i)[names(movid_i) == "a5"] <- "rel_jefhogar"
-names(movid_i)[names(movid_i) == "a6"] <- "rel_jefhogar"
-names(movid_i)[names(movid_i) == "a7"] <- "ecivil"
-names(movid_i)[names(movid_i) == "a5"] <- "rel_jefhogar"
-names(movid_i)[names(movid_i) == "a5"] <- "rel_jefhogar"
-names(movid_i)[names(movid_i) == "a5"] <- "rel_jefhogar"
-
-
-
-
-names(movid_i)[names(movid_i) == "r1_nombre"] <- "firstName"
-names(movid_i)[names(movid_i) == "u1_region"] <- "region"
-names(movid_i)[names(movid_i) == "u2_comuna"] <- "comuna"
-names(movid_i)[names(movid_i) == "u3_calle"] <- "calle"
-names(movid_i)[names(movid_i) == "r5_educ"] <- "educ"
-names(movid_i)[names(movid_i) == "pr1_wrk_salud"] <- "tra_salud"
-names(movid_i)[names(movid_i) == "pr2_prevision"] <- "prev"
-names(movid_i)[names(movid_i) == "X.U.FEFF.X.U.FEFF.pob_id"] <- "pob_id"
-
 ## Id
-movid_i$id_pob <- as.numeric(as.factor(movid_i$pob_id))
+movid_i$id_pob <- as.numeric(as.factor(movid_i$id_encuesta))
 
 ## Sex 
-movid_i$sexo <- ifelse(movid_i$sexo=="Otro",NA,movid_i$sexo)
+movid_i$sexo <- car::recode(movid_i$sexo, c("1='Hombre';2='Mujer'"), as.factor = T,
+                            levels = c("Hombre", "Mujer"))
 
-## Educ
+
+# Age ---------------------------------------------------------------------
+
+## Edad
+str(movid_i$edad) # num
+
+## Edad_3cat
 movid_i$edad_3cat <- ifelse(movid_i$edad<40, "18 a 39",
                           ifelse(movid_i$edad<65 & movid_i$edad>39, "40 a 64",
                                  ifelse(movid_i$edad>64, "65 y más", NA)))
-## Week
 
-## Aquí debo crear variable para ver semana del encuestado, asi agregar cuarentena ------------
-movid_i$semana <- ifelse(movid_i$semana==15, 16, movid_i$semana)
-movid_i$semana0 <- ifelse(movid_i$semana0==-1, 0, movid_i$semana0)
+movid_i$edad_3cat <- as_factor(movid_i$edad_3cat)
 
-## Prev
+
+# Education ---------------------------------------------------------------
+# Education: 3 categories: High school or less, Technical qualification and University degree
+table(movid_i$a8a)
+movid_i$educ_3cat <- as.numeric(movid_i$a8a)
+movid_i$educ_3cat <- car::recode(movid_i$educ_3cat, c("c(1,2,3,4,5,6)='Media o menos';7='Técnica';c(8,9)='Profesional';99=NA"), as.factor = T,
+                               levels = c("Media o menos", "Profesional", 'Técnica'))
+
+table(movid_i$educ_3cat)
+
+# Worker ------------------------------------------------------------------
+movid_i$trabaja <- ifelse(movid_i$pr3_ocupacion=="Trabaja de manera remunerada",1,0)
+# Worker (g1 or/type g10)
+
+# Health risk -------------------------------------------------------------
+# Health risk: arterial hypertension, obesity, diabetes, chronic respiratory diseases (asthma, emphysema or other), cardiovascular diseases, active cancer, chronic kidney disease or immunodeficiencies
+
+## Health risk General
+table(movid_i$c1_8)
+movid_i <- movid_i %>% mutate(cronicos = case_when(c1_1 == 1 ~ 1,
+                                                   c1_2 == 2 ~ 1,
+                                                   c1_3 == 3 ~ 1,
+                                                   c1_4 == 4 ~ 1,
+                                                   c1_5 == 5 ~ 1,
+                                                   c1_6_esp == "artritis" ~ 1,
+                                                   c1_7 == 7 ~ 1,
+                                                   c1_8 == 8 ~ NA_real_,
+                                                   c1_9 ==9 ~ NA_real_,
+                                                   TRUE ~ 0))
+
+table(movid_i$cronicos) ## Artritis
+178+339+48+91+161+567+7
+# Health insurance --------------------------------------------------------
+
+## Prev General
+table(movid_i$b2)
+movid_i$pr2_prevision <- as.numeric(movid_i$b2)
+movid_i$pr2_prevision <- car::recode(movid_i$pr2_prevision, c("1='FONASA';2='ISAPRE';3='Fuerzas Armadas y de Orden';4='Otr0';5='Ninguna';c(8,9)=NA"), as.factor = T,
+                                 levels = c("FONASA", "ISAPRE", 'Fuerzas Armadas y de Orden', 'Otro', 'Ninguna' ))
+
+table(movid_i$pr2_prevision)
+
+## Prev recodificaciones
 movid_i$prev_2categ <- as.factor(ifelse(movid_i$pr2_prevision=="FONASA",0,
-                                      ifelse(movid_i$pr2_prevision=="ISAPRE",1,2)))
+                                        ifelse(movid_i$pr2_prevision=="ISAPRE",1,2)))
 levels(movid_i$prev_2categ) <- c("FONASA","ISAPRE", "Otro")
 
 
 movid_i$prev_4categ <- as.factor(ifelse(movid_i$pr2_prevision=="Ninguna",0,
-                                      ifelse(movid_i$pr2_prevision=="FONASA",1,
-                                             ifelse(movid_i$pr2_prevision=="ISAPRE",2,3))))
+                                        ifelse(movid_i$pr2_prevision=="FONASA",1,
+                                               ifelse(movid_i$pr2_prevision=="ISAPRE",2,3))))
 levels(movid_i$prev_4categ) <- c("Ninguna","FONASA","ISAPRE", "Otro")
 
-## Work
-movid_i$trabaja <- ifelse(movid_i$pr3_ocupacion=="Trabaja de manera remunerada",1,0)
 
+# Lack income due COVID ---------------------------------------------------
 
-# Comuna ------------------------------------------------------------------
+# Residency ------------------------------------- -------------------------
+## Comuna ------------------------------------------------------------------
 movid_i$comuna <- chartr('áéíóúñü','aeiounu', movid_i$comuna)
 movid_i$comuna <- chartr('ÁÉÍÓÚÑ','AEIOUN', movid_i$comuna)
 movid_i$comuna <- ifelse(movid_i$comuna=="O'Higgins", "OHiggins", movid_i$comuna)
@@ -84,77 +102,17 @@ movid_i$comuna <- ifelse(movid_i$comuna=="llay-llay", "llaillay", movid_i$comuna
 movid_i$comuna <- ifelse(movid_i$comuna=="paihuano", "paiguano", movid_i$comuna)
 movid_i$comuna <- ifelse(movid_i$comuna=="til til", "tiltil", movid_i$comuna)
 
-# Education ---------------------------------------------------------------
-movid_i$educ_4cat <- ifelse(movid_i$educ=="Sin estudios" | movid_i$educ=="Educación Básica (primaria o preparatoria)", "Basica o sin estudios",
-                          ifelse(movid_i$educ == "Educación Media (Humanidades)", "Media",
-                                 ifelse(movid_i$educ == "Educación Profesional (Carreras de 4 o más años)", "Profesional",
-                                        ifelse(movid_i$educ == "Educación Técnica Nivel Superior (Carreras de 1 a 3 años)", "Tecnica", NA))))
-movid_i$educ_3cat <- ifelse(movid_i$educ=="Sin estudios" | movid_i$educ=="Educación Básica (primaria o preparatoria)" | movid_i$educ == "Educación Media (Humanidades)", "Media o menos",
-                          ifelse(movid_i$educ == "Educación Profesional (Carreras de 4 o más años)", "Profesional",
-                                 ifelse(movid_i$educ == "Educación Técnica Nivel Superior (Carreras de 1 a 3 años)", "Técnica", NA)))
 
-movid_i$educ_2cat <- ifelse(movid_i$educ=="Sin estudios" | movid_i$educ=="Educación Básica (primaria o preparatoria)" | movid_i$educ == "Educación Media (Humanidades)", "Media o menos",
-                          ifelse(movid_i$educ == "Educación Profesional (Carreras de 4 o más años)" | movid_i$educ == "Educación Técnica Nivel Superior (Carreras de 1 a 3 años)", "Más que media", NA))
+# Lockdown ----------------------------------------------------------------
 
-# Income and Work ------------------------------------------------------
-movid_i$tertil_ingre_c <- ifelse(movid_i$tertil_ingre==1, "Ingresos bajos", 
-                               ifelse(movid_i$tertil_ingre==2, "Ingresos medios",
-                                      ifelse(movid_i$tertil_ingre==3, "Ingresos altos", NA)))
-
-# Practices ---------------------------------------------------------------
-movid_i$dic_trabajo <- ifelse(movid_i$p1_pra_trabajo==0, 0,
-                            ifelse(movid_i$p1_pra_trabajo>0, 1, NA))
-
-movid_i$dic_tramite <- ifelse(movid_i$p1_pra_tramite==0, 0,
-                            ifelse(movid_i$p1_pra_tramite>0, 1, NA))
-
-movid_i$dic_visita <- ifelse(movid_i$p1_pra_visita==0, 0,
-                           ifelse(movid_i$p1_pra_visita>0, 1, NA))
-
-movid_i$dic_recrea <- ifelse(movid_i$p1_pra_recrea==0, 0,
-                           ifelse(movid_i$p1_pra_recrea>0, 1, NA))
-
-movid_i$dic_transporte <- ifelse(movid_i$p1_pra_transporte==0, 0,
-                               ifelse(movid_i$p1_pra_transporte>0, 1, NA))
-
-movid_i$dic_invitado <- ifelse(movid_i$p1_pra_invitado==0, 0,
-                             ifelse(movid_i$p1_pra_invitado>0, 1, NA))
-
-movid_i$dic_otro <- ifelse(movid_i$p1_pra_otro==0, 0,
-                         ifelse(movid_i$p1_pra_otro>0, 1, NA))
-
-movid_i$dic_protesta <- ifelse(movid_i$p1_pra_protesta==0, 0,
-                             ifelse(movid_i$p1_pra_protesta>0, 1, NA))
-
-movid_i$dic_practicas <- ifelse((movid_i$dic_trabajo==0 & movid_i$dic_tramite==0 & movid_i$dic_invitado==0 &
-                                 movid_i$dic_recrea==0 & movid_i$dic_transporte==0 & movid_i$dic_visita==0), 0,
-                              ifelse((movid_i$dic_trabajo>0 | movid_i$dic_tramite>0 | movid_i$dic_invitado>0 |
-                                        movid_i$dic_recrea>0 | movid_i$dic_transporte>0 | movid_i$dic_visita>0), 1, NA))
-
-movid_i$n_salidas <- (movid_i$p1_pra_trabajo+movid_i$p1_pra_recrea+movid_i$p1_pra_tramite+movid_i$p1_pra_visita)
+##Week
+## Aquí debo crear variable para ver semana del encuestado, asi agregar cuarentena ------------
+movid_i$semana <- ifelse(movid_i$semana==15, 16, movid_i$semana)
+movid_i$semana0 <- ifelse(movid_i$semana0==-1, 0, movid_i$semana0)
 
 
-# Speciall practices -----------------------------------------------------------------
-
-# Crear variable dummy de trabajar
-movid_i$trabaja <- ifelse(movid_i$pr3_ocupacion== 'Trabaja de manera remunerada',1,0)
-
-# Crear nsalidas y trabaja
-movid_i <- movid_i %>% mutate(p1_pra_otro = ifelse(is.na(p1_pra_otro),0,1),
-                          salidas= p1_pra_trabajo + p1_pra_tramite + p1_pra_recrea + p1_pra_visita + p1_pra_otro,
-                          trabaja = ifelse(is.na(trabaja),0,trabaja), # correcion trabajo
-                          tra_salud = ifelse(is.na(tra_salud),0,tra_salud), # correcion tra_salud
-                          p3_transp_publico = ifelse(is.na(p3_transp_publico),0,p3_transp_publico))
 
 
-# Sintomas ----------------------------------------------------------------
-movid_i$sintoma <- ifelse((movid_i$s1_snt_fiebre==1 | movid_i$s1_snt_anosmia==1 | movid_i$s1_snt_disnea==1 | movid_i$s1_snt_tos==1 |
-                           movid_i$s1_snt_mialgias==1 | movid_i$s1_snt_odinofagia==1 | movid_i$s1_snt_dol_torax==1 |
-                           movid_i$s1_snt_cefalea==1 | movid_i$s1_snt_diarrea==1 | movid_i$s1_snt_disgeusia==1), 1,
-                        ifelse((movid_i$s1_snt_fiebre==0 & movid_i$s1_snt_anosmia==0 & movid_i$s1_snt_disnea==0 & movid_i$s1_snt_tos==0 &
-                                  movid_i$s1_snt_mialgias==0 & movid_i$s1_snt_odinofagia==0 & movid_i$s1_snt_dol_torax==0 &
-                                  movid_i$s1_snt_cefalea==0 & movid_i$s1_snt_diarrea==0 & movid_i$s1_snt_disgeusia==0), 0, NA))
-movid_i$sintoma <- ifelse(movid_i$s1_snt_null==1, 0, movid_i$sintoma)
 
 
 # Models variables -----------------------------------------------------
