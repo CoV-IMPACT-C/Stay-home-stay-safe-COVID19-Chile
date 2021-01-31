@@ -38,7 +38,7 @@ movid_i <- readRDS("../../output/data/movid_impact_proc.RDS")
 ----
 
 ```{r recode}
-data <- movid_i %>% 
+data <- movid_i %>% ungroup() %>%  
   mutate(across(c(starts_with("comp")), ## Compliance
                 ~case_when(
                   . == "Always" ~ 1,
@@ -51,6 +51,7 @@ data <- movid_i %>%
            TRUE ~ 0),
          leg_enforce = factor(leg_enforce),
          normas = (as.numeric(normas)*-1)+7, ## Normative A
+         norms = if_else(nocumple_normas == 1,0,1), #Creo 
          soc2_obedecer = (as.numeric(soc2_obedecer)*-1)+7) ##Normative B
 ```
 
@@ -118,7 +119,8 @@ data %>% group_by(sex) %>%
 - Age
 
 ```{r age}
-summarytools::descr(data, var = age, stats = "common")
+data %>% ungroup() %>% 
+summarytools::descr(., var = age, stats = "common")
 ```
 
 ```{r age2}
