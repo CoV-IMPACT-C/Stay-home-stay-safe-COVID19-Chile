@@ -8,7 +8,7 @@ movid <- read.csv("input/data/movid19.csv", sep=",",
                   encoding = "UTF-8", stringsAsFactors = F )
 
 ## Lockdowns
-readRDS(lockdowns, "output/data/lockdowns.RDS")
+lockdowns <- readRDS("output/data/lockdowns_movid.RDS")
 
 # 3. Recodes -----------------------------------------------------
 
@@ -143,24 +143,6 @@ movid$sintoma <- ifelse((movid$s1_snt_fiebre==1 | movid$s1_snt_anosmia==1 | movi
 movid$sintoma <- ifelse(movid$s1_snt_null==1, 0, movid$sintoma)
 
 
-
-# Vote --------------------------------------------------------------------
-
-movid$voto <- ifelse(movid$soc5_voto==1, 1, 0) # Correcion de los Prefiero no contestar
-
-
-# Protest ----------------------------------------------------------------
-
-movid <- movid %>% mutate(p1_pra_protesta = ifelse(is.na(p1_pra_protesta),0,p1_pra_protesta))
-
-movid$voto_lag1 <- lag(movid$voto, n=1) #Ver de imputar voto a todos en la semana del plebiscito
-movid$protesta_lag1 <- lag(movid$p1_pra_protesta, n=1)
-movid$voto_lag2 <- lag(movid$voto, n=2)
-movid$voto_lag3 <- lag(movid$voto, n=3)
-movid$protesta_lag2 <- lag(movid$p1_pra_protesta, n=2)
-movid$protesta_lag3 <- lag(movid$p1_pra_protesta, n=3)
-
-
 # Models variables -----------------------------------------------------
 ## Dic Salidas
 movid$salidas_dic <- ifelse(movid$salidas>2,1,0)
@@ -184,5 +166,4 @@ movid_proc <- movid; remove(movid)
 movid <- left_join(movid_proc, lockdowns, by=c("comuna", "semana"))
 
 # 5. Save  -----------------------------------------------------------------
-saveRDS(lockdowns, "output/data/movid_proc.rds")
-save(movid, file = "output/data/movid.RData")
+saveRDS(movid, "output/data/movid_proc.RDS")
