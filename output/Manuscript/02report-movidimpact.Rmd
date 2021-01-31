@@ -1,5 +1,5 @@
 ---
-title: "Descriptive Report MOVID-IMPACT survey"
+title: "Report MOVID-IMPACT survey"
 subtitle: 'Stay home, stay safe: Why are people in Chile not complying with stay-at-home recommendations and restrictions?<br>ANID-COVID N°960 “CoV-IMPACT-C”'
 author: "by Valentina Andrade"
 lang: es-CL
@@ -33,151 +33,157 @@ kable <- function(data) {
 # 1. Cargar paquetes
 pacman::p_load(tidyverse, kableExtra)
 # 2. Cargar tablas
-movid_i <- readRDS("../../output/data/movid_i_proc.RDS")
+movid_i <- readRDS("../../output/data/movid_impact_proc.RDS")
 ```
 ----
 
-# Modelo {-}
-
-El modelo hasta ahora considerado para los datos de MOVID es el siguiente
-
-- Con variable continua
-```{r model-movid, eval = F}
-lmer.simple.int <- lmer(salidas ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * per_riesgo_ord + cuarentenawk_lag1 * cumple_normas +
-                          semana0 + (1 | semana:id_pob), data=data.short)
+```{r recode}
+data <- movid_i %>% 
+  mutate(across(c(starts_with("comp")), ## Compliance
+                ~case_when(
+                  . == "Always" ~ 1,
+                  is.na(.) ~ NA_real_,
+                  TRUE ~ 0)), 
+         across(c(per_risk), ~as.numeric(.)), ## Instrumental A 
+          leg_enforce = case_when( ## Instrumental B
+           leg_enforce %in% c("Strongly disagree", "Disagree") ~ 1,
+           is.na(leg_enforce) ~ NA_real_,
+           TRUE ~ 0),
+         leg_enforce = factor(leg_enforce),
+         normas = (as.numeric(normas)*-1)+7, ## Normative A
+         soc2_obedecer = (as.numeric(soc2_obedecer)*-1)+7) ##Normative B
 ```
 
 
-- Con variable binaria 
-```{r model-movid2, eval = F}
-logit.model5 <- glmer(salidas_dic ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * alto_riesgo + cuarentenawk_lag1 * cumple_normas +
-                        semana0 + (1 | id_pob), data=data.short, family = binomial("logit"),
-                      control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5)))
+# Descriptive
 
-```
+## Compliance
 
-En base a los comentarios de los revisores se trabajará con los datos de la nueva encuesta MOVID-IMPACT
+In the last week, how often have you done the following actions to protect yourself from coronavirus?
 
-# Compliance
-
-- **Ítem**
-En la última semana, ¿con qué frecuencia ha realizado las siguientes acciones para protegerse del coronavirus? Ud. me debe decir si las ha realizado Casi nunca, A veces, Frecuentemente, Casi siempre o Siempre
-
-  - Lavarse las manos durante 20 segundos
+  - Wash your hands for 20 seconds
 
 ```{r wash}
-movid_i %>% group_by(comp_wash) %>% 
+data %>% group_by(comp_wash) %>% 
     summarise( n = n(),
       percent = 100 * n() / nrow(movid_i)) %>%
   kable()
 ```
 
-  - Mantener al menos dos metros de distancia de personas a su alrededor
-
+  - Keep at least two meters away from people around you.
 ```{r distance}
-movid_i %>% group_by(comp_dist) %>% 
+data %>% group_by(comp_dist) %>% 
     summarise( n = n(),
       percent = 100 * n() / nrow(movid_i)) %>%
   kable()
 ```
 
-  - Evitar reunirse con más de 10 personas en un espacio cerrado
+  - Avoid meeting with more than 10 persons in an closed place.
   
 ```{r social}
-movid_i %>% group_by(comp_soc) %>% 
+data %>% group_by(comp_soc) %>% 
     summarise( n = n(),
       percent = 100 * n() / nrow(movid_i)) %>%
   kable()
 ```
 
-  - Usar mascarilla al salir de su hogar
+  - Wear a mask when you leave home
 
 ```{r mask home}
-movid_i %>% group_by(comp_mask) %>% 
+data %>% group_by(comp_mask) %>% 
     summarise( n = n(),
       percent = 100 * n() / nrow(movid_i)) %>%
   kable()
 ```
 
-  - Usar mascarilla al reunirse con otras personas en un lugar cerrado
+  - Wear a mask when you meet other people in an closed place.
 
 ```{r mask places}
-movid_i %>% group_by(comp_mask2) %>% 
+data %>% group_by(comp_mask2) %>% 
     summarise( n = n(),
       percent = 100 * n() / nrow(movid_i)) %>%
   kable()
 ```
 
-- ¿Colapsamos las categorías?
 
-# Sociodemographic
+## Sociodemographic
 
-```{r descriptive}
-movid_i %>% group_by(sexo) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(educ_3cat) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(educ_3cat) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(prev_4categ) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(cronicos) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(trabaja) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(lack_income) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+- Sex
 
+```{r}
+data %>% group_by(sex) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
 - Age
 
 ```{r age}
-summarytools::descr(movid_i, var = edad, stats = "common")
+summarytools::descr(data, var = age, stats = "common")
 ```
 
 ```{r age2}
-movid_i %>% group_by(edad_3cat) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+data %>% group_by(age_3cat) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
-- Residency
+- Education
 
-  - Regiones
-
-```{r reg}
-movid_i %>%  
-  group_by(region) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-
+```{r}
+data %>% group_by(educ_3cat) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
- 
 
-  - Comunas de Santiago (está listo pero se quiere ver en relación a cuarentena por si se produce algún sesgo)
-```{r comuna, eval = F}
-movid_i %>% filter(region == 13) %>% 
-  group_by(nombre_comuna) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+- Occupation
+
+```{r}
+data %>% group_by(work) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
 
-- Lockdown (*se debe solicitar marca temporal para ver en qué Fase están los individuos*)
+- Household income (log)
 
-# Instrumental factors
+```{r }
+summarytools::descr(data, var = income_hh, stats = "common")
+```
 
-## A. Perived risk (f6)
 
-- **Ítem**
+- Health risk
 
-¿Qué tan peligroso cree que es el coronavirus para usted y sus cercanos?
+```{r}
+data %>% group_by(cronicos) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+- Health insurance
+
+```{r}
+data %>% group_by(prev_4categ) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+- Lockdown
+
+```{r}
+data %>% group_by(lockdown) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+
+
+## Instrumental factors
+
+### A. Perived risk
+
+How dangerous do you think Coronavirus is for you and your closest one?
 
 ```{r per_risk}
-movid_i %>% group_by(per_risk) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(high_risk) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(low_risk) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+data %>% group_by(per_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(high_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(low_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 
 ```
 
@@ -185,61 +191,78 @@ movid_i %>% group_by(low_risk) %>%
 
 - **Ítem**
 
-En Chile, si una persona sale sin permiso durante una cuarentena es muy poco probable que sea controlado y multado.
-
+In Chile, if any person goes out without permission during a lockdown, it is very unlikely that this person will be inspected and punished.
 
 ```{r leg-inf}
-movid_i %>% group_by(leg_enforce) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+data %>% group_by(leg_enforce) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(high_leg) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(low_leg) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+
 ```
 
 
-# Normative factors
+## Normative factors
 
-## A. Perceived social norms
+### A. Perceived social norms
 
-- **Ítem**
-
-Pensando en distintas medidas de cuidado ante el coronavirus (quedarse en casa, usar     mascarilla, mantener distanciamiento social o lavarse las manos). ¿En qué medida diría Ud. que su círculo cercano (personas que viven con Ud. o su familia cercana) cumple estas recomendaciones?
+Thinking about the different coronavirus care measures ( staying at home, wearing a mask, keeping a social distance or washing your hands), to what extent would you say that your closest ones (people who live with you or your close family) comply with these recommendations?
 
 ```{r normas}
-movid_i %>% group_by(normas) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(cumple_normas) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
-movid_i %>% group_by(nocumple_normas) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+data %>% group_by(normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(cumple_normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(nocumple_normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 
 ```
 
 ## B. Legitimacy
 
-- **Ítem**
-
-Aunque a veces no estemos de acuerdo con las autoridades sanitarias y las medidas que se proponen, es nuestro deber seguir sus indicaciones al pie de la letra.
+Even if we sometimes disagree with the health authorities and the measures they propose, it is our duty to accuratly follow their indications.
 
 ```{r obedecer}
-movid_i %>% group_by(soc2_obedecer) %>% 
-    summarise(n = n(), percent = 100 * n() / nrow(movid_i)) %>% kable()
+data %>% group_by(soc2_obedecer) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 
 ```
 
 
-Ahora bien se verá la correlación de `soc2_obedecer` con dos ítems de interés que fueron preguntados en la misma batería:
+Now, we evaluated the correlation of the item `soc2_obey` with two more items of the same battery: 
 
-- `soc1_bienestar`: Las autoridades de gobierno han priorizado el bienestar de la población por sobre otros intereses políticos y económicos
+- `soc1_welfare`: Government authorities have prioritized the welfare of the population over other political and economic interests.
 
-- `soc3_gob`: Aunque a veces no estemos de acuerdo con las autoridades
-sanitarias y las medidas que se proponen, es nuestro deber seguir sus indicaciones al pie de la letra.
+- `soc3_gob`: Although we sometimes disagree with health authorities and the measures they propose, it is our duty to accuratly follow their indications.
 
 
 ```{r corr}
-aux <- movid_i %>% select(starts_with("soc")) %>% mutate_at(vars(1:3),funs(as.numeric(.))) 
+aux <- data %>% select(starts_with("soc")) %>% mutate_at(vars(1:3),funs(as.numeric(.))) 
 
 sjPlot::sjt.corr(aux,
          triangle = "lower")
 ```
 
+As we can see, the item of interest `soc2_obey` has a very low correlation with the rest of the items, while among them there is a medium correlation. Consequently, only the item that was initially defined to measure legitimacy (*soc2_obey*) should be chosen. 
+
+# Models {-}
 
 
-El ítem de interés `soc2_obedecer` tiene una correlación muy baja con el resto de los ítems, mientras que entre ellos existe una correlación media. En consecuencia, solo se debería elegir únicamente el ítem que inicialmente fue definido para medir legitimidad (*soc2_obedecer*). 
+- Continuos model
+
+```{r model-movid, eval = F}
+lmer.simple.int <- lmer(salidas ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * per_riesgo_ord + cuarentenawk_lag1 * cumple_normas +
+                          semana0 + (1 | semana:id_pob), data=data.short)
+```
+
+
+- Binomial model 
+
+```{r model-movid2, eval = F}
+logit.model5 <- glmer(salidas_dic ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * alto_riesgo + cuarentenawk_lag1 * cumple_normas +
+                        semana0 + (1 | id_pob), data=data.short, family = binomial("logit"),
+                      control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5)))
+
+```
