@@ -7,7 +7,6 @@ pacman::p_load(tidyr, dplyr, lubridate, readxl, stringi)
 data.cuarentena <- read_excel("input/data/CUT_CUARENTENAS_COVID.xls")
 data.cuarentena <- data.cuarentena[,-1]
 
-
 # 3. Lockdown structure data -----------------------------------------
 # Long format y dates
 cuarentena_long <- tidyr:::gather(data.cuarentena, dia, cuarentena,colnames(data.cuarentena)[2]:tail(colnames(data.cuarentena),n=1), factor_key=F)
@@ -66,6 +65,6 @@ cuarentenas <- cuarentenas[,-9]
 
 
 # 4. Export --------------------------------------------------------
-lockdowns <- cuarentenas; remove(cuarentenas) 
-saveRDS(lockdowns, "output/data/lockdowns.RDS")
+lockdowns_movid <- cuarentenas; remove(cuarentenas) 
+saveRDS(lockdowns_movid, "output/data/lockdowns_movid.RDS")
 
