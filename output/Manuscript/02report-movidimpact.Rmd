@@ -31,7 +31,7 @@ kable <- function(data) {
 
 ```{r packages, echo = F}
 # 1. Cargar paquetes
-pacman::p_load(tidyverse, kableExtra)
+pacman::p_load(tidyverse, kableExtra, sjPlot)
 # 2. Cargar tablas
 movid_i <- readRDS("../../output/data/movid_impact_proc.RDS")
 ```
@@ -62,7 +62,7 @@ data <- movid_i %>% ungroup() %>%
 
 In the last week, how often have you done the following actions to protect yourself from coronavirus?
 
-  - Wash your hands for 20 seconds
+### Wash your hands for 20 seconds
 
 ```{r wash}
 data %>% group_by(comp_wash) %>% 
@@ -71,7 +71,8 @@ data %>% group_by(comp_wash) %>%
   kable()
 ```
 
-  - Keep at least two meters away from people around you.
+### Keep at least two meters away from people around you.
+
 ```{r distance}
 data %>% group_by(comp_dist) %>% 
     summarise( n = n(),
@@ -79,7 +80,7 @@ data %>% group_by(comp_dist) %>%
   kable()
 ```
 
-  - Avoid meeting with more than 10 persons in an closed place.
+### Avoid meeting with more than 10 persons in an closed place.
   
 ```{r social}
 data %>% group_by(comp_soc) %>% 
@@ -88,7 +89,7 @@ data %>% group_by(comp_soc) %>%
   kable()
 ```
 
-  - Wear a mask when you leave home
+### Wear a mask when you leave home
 
 ```{r mask home}
 data %>% group_by(comp_mask) %>% 
@@ -97,7 +98,7 @@ data %>% group_by(comp_mask) %>%
   kable()
 ```
 
-  - Wear a mask when you meet other people in an closed place.
+### Wear a mask when you meet other people in an closed place.
 
 ```{r mask places}
 data %>% group_by(comp_mask2) %>% 
@@ -109,14 +110,14 @@ data %>% group_by(comp_mask2) %>%
 
 ## Sociodemographic
 
-- Sex
+### Sex
 
-```{r}
+```{r sex}
 data %>% group_by(sex) %>% 
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
-- Age
+### Age
 
 ```{r age}
 data %>% ungroup() %>% 
@@ -128,49 +129,48 @@ data %>% group_by(age_3cat) %>%
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
-- Education
+### Education
 
-```{r}
+```{r educ}
 data %>% group_by(educ_3cat) %>% 
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
-- Occupation
+### Occupation
 
-```{r}
+```{r occup}
 data %>% group_by(work) %>% 
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
 
-- Household income (log)
+### Household income (log)
 
-```{r }
+```{r income}
 summarytools::descr(data, var = income_hh, stats = "common")
 ```
 
 
-- Health risk
+### Health risk
 
-```{r}
+```{r healthrisk}
 data %>% group_by(cronicos) %>% 
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
-- Health insurance
+### Health insurance
 
-```{r}
+```{r healthinsurance}
 data %>% group_by(prev_4categ) %>% 
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
 
-- Lockdown
+### Lockdown
 
-```{r}
+```{r lockdown}
 data %>% group_by(lockdown) %>% 
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 ```
-
 
 
 ## Instrumental factors
@@ -189,9 +189,7 @@ data %>% group_by(low_risk) %>%
 
 ```
 
-## B. Legal enforcement
-
-- **Ítem**
+### B. Legal enforcement
 
 In Chile, if any person goes out without permission during a lockdown, it is very unlikely that this person will be inspected and punished.
 
@@ -219,10 +217,13 @@ data %>% group_by(cumple_normas) %>%
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
 data %>% group_by(nocumple_normas) %>% 
     summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(norms) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+
 
 ```
 
-## B. Legitimacy
+### B. Legitimacy
 
 Even if we sometimes disagree with the health authorities and the measures they propose, it is our duty to accuratly follow their indications.
 
@@ -251,20 +252,28 @@ As we can see, the item of interest `soc2_obey` has a very low correlation with 
 
 # Models {-}
 
+```{r model-estimate, eval = T}
 
-- Continuos model
+predictors <- c("sex + age + educ_3cat +  cronicos + 
+                  prev_4categ + work + lockdown +  
+                  per_risk + leg_enforce +
+                  norms + soc2_obedecer")
 
-```{r model-movid, eval = F}
-lmer.simple.int <- lmer(salidas ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * per_riesgo_ord + cuarentenawk_lag1 * cumple_normas +
-                          semana0 + (1 | semana:id_pob), data=data.short)
+#saque income_hh
+
+m_wash  <- glm(as.formula(paste0("comp_wash ~", predictors)), 
+                data=data, family="binomial")
+m_dist   <- glm(as.formula(paste0("comp_dist ~", predictors)),
+                data=data, family="binomial")
+m_soc <- glm(as.formula(paste0("comp_soc ~", predictors)),
+                data=data, family="binomial")
+m_mask   <- glm(as.formula(paste0("comp_mask ~", predictors)),
+                data=data, family="binomial")
+m_mask2  <- glm(as.formula(paste0("comp_mask2 ~", predictors)),
+                data=data, family="binomial")
+
 ```
 
-
-- Binomial model 
-
-```{r model-movid2, eval = F}
-logit.model5 <- glmer(salidas_dic ~ sexo + edad + riesgo + educ_3categ + prev_4categ + trabaja + cuarentenawk_lag1 * alto_riesgo + cuarentenawk_lag1 * cumple_normas +
-                        semana0 + (1 | id_pob), data=data.short, family = binomial("logit"),
-                      control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5)))
-
+```{r model-tab, eval = T}
+tab_model(m_wash, m_dist, m_soc, m_mask, m_mask2)
 ```
