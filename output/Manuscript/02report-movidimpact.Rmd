@@ -1,0 +1,279 @@
+---
+title: "Report MOVID-IMPACT survey"
+subtitle: 'Stay home, stay safe: Why are people in Chile not complying with stay-at-home recommendations and restrictions?<br>ANID-COVID N°960 “CoV-IMPACT-C”'
+author: "by Valentina Andrade"
+lang: es-CL
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: yes
+    depth: 2
+    theme: cerulean
+    number_sections: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = F, warning = F, results = 'asis')
+summarytools::st_options(bootstrap.css     = FALSE,       # Already part of the theme so no need for it
+           plain.ascii       = FALSE,       # One of the essential settings
+           style             = "rmarkdown", # Idem.
+           dfSummary.silent  = TRUE,        # Suppresses messages about temporary files
+           footnote          = NA,          # Keeping the results minimalistic
+           subtitle.emphasis = FALSE)       # For the vignette theme, this gives better results.
+#summarytools::st_css()
+
+library(ggplot2); theme_set(theme_classic() + theme(text = element_text(size = 12)))
+library(knitr);  options(knitr.kable.NA = 'No sabe/No responde')
+kable <- function(data) {
+  knitr::kable(data, booktabs = T, digits = 3) %>% kable_styling(latex_options =c("striped", "scale_down"),bootstrap_options = c("striped", "hover", "responsive", "condensed"))
+}
+```
+
+```{r packages, echo = F}
+# 1. Cargar paquetes
+pacman::p_load(tidyverse, kableExtra, sjPlot)
+# 2. Cargar tablas
+movid_i <- readRDS("../../output/data/movid_impact_proc.RDS")
+```
+----
+
+```{r recode}
+data <- movid_i %>% ungroup() %>%  
+  mutate(across(c(starts_with("comp")), ## Compliance
+                ~case_when(
+                  . == "Always" ~ 1,
+                  is.na(.) ~ NA_real_,
+                  TRUE ~ 0)), 
+         across(c(per_risk), ~as.numeric(.)), ## Instrumental A 
+          leg_enforce = case_when( ## Instrumental B
+           leg_enforce %in% c("Strongly disagree", "Disagree") ~ 1,
+           is.na(leg_enforce) ~ NA_real_,
+           TRUE ~ 0),
+         leg_enforce = factor(leg_enforce),
+         normas = (as.numeric(normas)*-1)+7, ## Normative A
+         norms = if_else(nocumple_normas == 1,0,1), #Creo 
+         soc2_obedecer = (as.numeric(soc2_obedecer)*-1)+7) ##Normative B
+```
+
+
+# Descriptive
+
+## Compliance
+
+In the last week, how often have you done the following actions to protect yourself from coronavirus?
+
+### Wash your hands for 20 seconds
+
+```{r wash}
+data %>% group_by(comp_wash) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+### Keep at least two meters away from people around you.
+
+```{r distance}
+data %>% group_by(comp_dist) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+### Avoid meeting with more than 10 persons in an closed place.
+  
+```{r social}
+data %>% group_by(comp_soc) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+### Wear a mask when you leave home
+
+```{r mask home}
+data %>% group_by(comp_mask) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+### Wear a mask when you meet other people in an closed place.
+
+```{r mask places}
+data %>% group_by(comp_mask2) %>% 
+    summarise( n = n(),
+      percent = 100 * n() / nrow(movid_i)) %>%
+  kable()
+```
+
+
+## Sociodemographic
+
+### Sex
+
+```{r sex}
+data %>% group_by(sex) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+### Age
+
+```{r age}
+data %>% ungroup() %>% 
+summarytools::descr(., var = age, stats = "common")
+```
+
+```{r age2}
+data %>% group_by(age_3cat) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+### Education
+
+```{r educ}
+data %>% group_by(educ_3cat) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+### Occupation
+
+```{r occup}
+data %>% group_by(work) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+
+### Household income (log)
+
+```{r income}
+summarytools::descr(data, var = income_hh, stats = "common")
+```
+
+
+### Health risk
+
+```{r healthrisk}
+data %>% group_by(cronicos) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+### Health insurance
+
+```{r healthinsurance}
+data %>% group_by(prev_4categ) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+### Lockdown
+
+```{r lockdown}
+data %>% group_by(lockdown) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+```
+
+
+## Instrumental factors
+
+### A. Perived risk
+
+How dangerous do you think Coronavirus is for you and your closest one?
+
+```{r per_risk}
+data %>% group_by(per_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(high_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(low_risk) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+
+```
+
+### B. Legal enforcement
+
+In Chile, if any person goes out without permission during a lockdown, it is very unlikely that this person will be inspected and punished.
+
+```{r leg-inf}
+data %>% group_by(leg_enforce) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(high_leg) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(low_leg) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+
+```
+
+
+## Normative factors
+
+### A. Perceived social norms
+
+Thinking about the different coronavirus care measures ( staying at home, wearing a mask, keeping a social distance or washing your hands), to what extent would you say that your closest ones (people who live with you or your close family) comply with these recommendations?
+
+```{r normas}
+data %>% group_by(normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(cumple_normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(nocumple_normas) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+data %>% group_by(norms) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+
+
+```
+
+### B. Legitimacy
+
+Even if we sometimes disagree with the health authorities and the measures they propose, it is our duty to accuratly follow their indications.
+
+```{r obedecer}
+data %>% group_by(soc2_obedecer) %>% 
+    summarise(n = n(), percent = 100 * n() / nrow(data)) %>% kable()
+
+```
+
+
+Now, we evaluated the correlation of the item `soc2_obey` with two more items of the same battery: 
+
+- `soc1_welfare`: Government authorities have prioritized the welfare of the population over other political and economic interests.
+
+- `soc3_gob`: Although we sometimes disagree with health authorities and the measures they propose, it is our duty to accuratly follow their indications.
+
+
+```{r corr}
+aux <- data %>% select(starts_with("soc")) %>% mutate_at(vars(1:3),funs(as.numeric(.))) 
+
+sjPlot::sjt.corr(aux,
+         triangle = "lower")
+```
+
+As we can see, the item of interest `soc2_obey` has a very low correlation with the rest of the items, while among them there is a medium correlation. Consequently, only the item that was initially defined to measure legitimacy (*soc2_obey*) should be chosen. 
+
+# Models {-}
+
+```{r model-estimate, eval = T}
+
+predictors <- c("sex + age + educ_3cat +  cronicos + 
+                  prev_4categ + work + lockdown +  
+                  per_risk + leg_enforce +
+                  norms + soc2_obedecer")
+
+#saque income_hh
+
+m_wash  <- glm(as.formula(paste0("comp_wash ~", predictors)), 
+                data=data, family="binomial")
+m_dist   <- glm(as.formula(paste0("comp_dist ~", predictors)),
+                data=data, family="binomial")
+m_soc <- glm(as.formula(paste0("comp_soc ~", predictors)),
+                data=data, family="binomial")
+m_mask   <- glm(as.formula(paste0("comp_mask ~", predictors)),
+                data=data, family="binomial")
+m_mask2  <- glm(as.formula(paste0("comp_mask2 ~", predictors)),
+                data=data, family="binomial")
+
+```
+
+```{r model-tab, eval = T}
+tab_model(m_wash, m_dist, m_soc, m_mask, m_mask2)
+```
