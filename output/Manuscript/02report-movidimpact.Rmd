@@ -51,7 +51,7 @@ data <- movid_i %>% ungroup() %>%
            TRUE ~ 0),
          leg_enforce = factor(leg_enforce),
          normas = (as.numeric(normas)*-1)+7, ## Normative A
-         norms = if_else(nocumple_normas == 1,0,1), #Creo 
+         norms = if_else(nocumple_normas == 1,0,1), #Creo
          soc2_obedecer = (as.numeric(soc2_obedecer)*-1)+7) ##Normative B
 ```
 
@@ -244,8 +244,7 @@ Now, we evaluated the correlation of the item `soc2_obey` with two more items of
 ```{r corr}
 aux <- data %>% select(starts_with("soc")) %>% mutate_at(vars(1:3),funs(as.numeric(.))) 
 
-sjPlot::sjt.corr(aux,
-         triangle = "lower")
+
 ```
 
 As we can see, the item of interest `soc2_obey` has a very low correlation with the rest of the items, while among them there is a medium correlation. Consequently, only the item that was initially defined to measure legitimacy (*soc2_obey*) should be chosen. 
@@ -257,7 +256,7 @@ As we can see, the item of interest `soc2_obey` has a very low correlation with 
 predictors <- c("sex + age + educ_3cat +  cronicos + 
                   prev_4categ + work + lockdown +  
                   per_risk + leg_enforce +
-                  norms + soc2_obedecer")
+                  cumple_normas + soc2_obedecer")
 
 #saque income_hh
 

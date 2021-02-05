@@ -4,7 +4,7 @@ pacman::p_load(tidyverse)
 
 # 2. Load data  -------------------------------------------
 ## movid_i-19
-movid_i <- haven::read_dta("input/data/20210125_base_movid_version_codificada.dta")
+movid_i <- haven::read_dta("input/data/210118_base_movid_version01.dta")
 movid_i <- movid_i %>% filter(entrevistado == 1) # Only people survey
 
 ## Lockdowns
@@ -115,28 +115,16 @@ movid_i <- movid_i %>% mutate(cronicos = case_when(c1_1 == 1 ~ 1,
                                                    c1_2 == 1 ~ 1,
                                                    c1_3 == 1 ~ 1,
                                                    c1_4 == 1 ~ 1,
-                                                   c1_5 == 1 ~ 1,
-                                                   c1_6_esp %in% c("artritis", "artritis reumatoide, fibromialgia") ~ 1,
                                                    c1_7 == 1 ~ 0,
                                                    c1_8 == 1 ~ NA_real_,
                                                    c1_9 == 1 ~ NA_real_)) %>%
   mutate(cronicos = if_else(cronicos == 1, "Yes", "No"))
 
-table(movid_i$cronicos) ## Artritis
+table(movid_i$cronicos, useNA = "always") ## Artritis
 
-movid_i$cronicos <- ifelse(movid_i$c1_1==0 &
-                             movid_i$c1_2==0 &
-                             movid_i$c1_3==0 &
-                             movid_i$c1_4==0 &
-                             movid_i$c1_5==0 &
-                             movid_i$c1_6_esp!= "artritis reumatoide, fibromialgia" &
-                             movid_i$c1_6_esp!="artritis", "No",
+movid_i$cronicos <- ifelse(movid_i$c1_1==0 & movid_i$c1_2==0 & movid_i$c1_3==0 & movid_i$c1_4==0, "No",
                            movid_i$cronicos)
 
-movid_i$cronicos <- ifelse(is.na(movid_i$cronicos) &
-                             is.na(movid_i$c1_6_esp) &
-                             movid_i$c1_6==1, "No",
-                           movid_i$cronicos)
 movid_i$cronicos <- factor(movid_i$cronicos, levels = c("No", "Yes"))
 
 # 2.7 Health insurance --------------------------------------------------------
