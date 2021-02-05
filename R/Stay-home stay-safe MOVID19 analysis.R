@@ -10,7 +10,7 @@ rm(list = ls(all.names = TRUE))
 
 ### Working Directory
 
-setwd("~/Dropbox/MOVID-19/Documento de Trabajo/articulo_adherencia/analisis MOVID adherencia")
+setwd("~/GitHub/Stay-home-stay-safe-COVID19-Chile")
 
 ### Cargar paquetes 
 library(psych)
@@ -38,6 +38,7 @@ library("googlesheets4")
 ### Cargar datos
 data <- read_csv("~/Dropbox/MOVID-19/analisis/bases_anonimizadas/movid19_20200904.csv")
 load("tsmargins_opinion.R")
+
 
 # Minor changes
 data$semana <- ifelse(data$semana==15,16,data$semana)
@@ -385,9 +386,6 @@ table2 <- tab_model(logit.model1, logit.model2, logit.model3, logit.model4, logi
                                     "Lockdown * social norms"),
                     show.ci=F, title="Persons that report 2 or more out-of-home activities per week (Multilevel logistic models)",
                     file="table2.html")
-table2
-
-summary(data.short$bajo_riesgo)
 
 # Paper figures
 data.short$cumple_normas2 <- as.factor(data.short$cumple_normas)
@@ -527,5 +525,112 @@ data.short %>%
 data.short %>% 
   group_by(normas) %>% 
   summarise(n=n(), percent = 100 * n() / nrow(data.short))
+
+
+## MOVID-Impact models 
+# Cargar datos
+movid_i <- readRDS("output/data/movid_impact_proc.RDS")
+
+# Recodificaciones
+data <- movid_i %>% ungroup() %>%  
+  mutate(across(c(starts_with("comp")), ## Compliance
+                ~case_when(
+                  . == "Always" ~ 1,
+                  is.na(.) ~ NA_real_,
+                  TRUE ~ 0)), 
+         across(c(per_risk), ~as.numeric(.)), ## Instrumental A 
+         leg_enforce = case_when( ## Instrumental B
+           leg_enforce %in% c("Strongly disagree", "Disagree") ~ 1,
+           is.na(leg_enforce) ~ NA_real_,
+           TRUE ~ 0),
+         leg_enforce = factor(leg_enforce),
+         normas = (as.numeric(normas)*-1)+7, ## Normative A
+         norms = if_else(nocumple_normas == 1,0,1), #Creo
+         soc2_obedecer = (as.numeric(soc2_obedecer)*-1)+6) ##Normative B
+
+data$cumple_normas <-  ifelse(data$cumple_normas == 1, "High", 
+                              ifelse(data$cumple_normas == 0, "Low", NA ))
+data$cumple_normas <-  factor(data$cumple_normas, levels = c("Low", "High"))
+
+data$leg_enforce <-  ifelse(data$leg_enforce == 1, "High", 
+                              ifelse(data$leg_enforce == 0, "Low", NA ))
+data$leg_enforce <-  factor(data$leg_enforce, levels = c("Low", "High"))
+
+# Modelos de regresión
+predictors <- c("sex + age + educ_3cat +  cronicos + 
+                  prev_4categ + work + lockdown +  
+                  per_risk + leg_enforce +
+                  cumple_normas + soc2_obedecer")
+
+m_wash  <- glm(as.formula(paste0("comp_wash ~", predictors)), 
+               data=data, family="binomial")
+m_dist   <- glm(as.formula(paste0("comp_dist ~", predictors)),
+                data=data, family="binomial")
+m_soc <- glm(as.formula(paste0("comp_soc ~", predictors)),
+             data=data, family="binomial")
+m_mask   <- glm(as.formula(paste0("comp_mask ~", predictors)),
+                data=data, family="binomial")
+m_mask2  <- glm(as.formula(paste0("comp_mask2 ~", predictors)),
+                data=data, family="binomial")
+tab_model(m_wash, m_dist, m_soc, m_mask, m_mask2)
+
+# Gráficos de valores estimados
+sex <- ggemmeans(m_dist, type = "fe", terms = c("sex"))
+age <- ggemmeans(m_dist, type = "fe", terms = c("age"))
+works <- ggemmeans(m_dist, type = "fe", terms = c("work"))
+riesgo <- ggemmeans(m_dist, type = "fe", terms = c("per_risk"))
+leg <- ggemmeans(m_dist, type = "fe", terms = c("leg_enforce"))
+norms <- ggemmeans(m_dist, type = "fe", terms = c("cumple_normas"))
+
+sexo <- ggplot(sex, aes(y=predicted, x=x)) + geom_point(size=3) + geom_errorbar(aes(ymin=conf.low, ymax=conf.high), size=1, width=0.05) +
+  coord_cartesian(y=c(0,1)) + labs(x = "Sex", y = "Keep at least 2 meters away from people (%)") +
+  theme_minimal() + scale_y_continuous(labels=scales::percent)
+sexo
+
+edad <- ggplot(age, aes(y=predicted, x=x)) + geom_line(size=1) + geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.3) +
+  coord_cartesian(y=c(0,1)) + labs(x = "Age", y = "Keep at least 2 meters away from people (%)") +
+  theme_minimal() + scale_y_continuous(labels=scales::percent)
+edad
+
+trabaja <- ggplot(works, aes(y=predicted, x=x)) + geom_point(size=3) + geom_errorbar(aes(ymin=conf.low, ymax=conf.high), size=1, width=0.05) +
+  coord_cartesian(y=c(0,1)) + labs(x = "Works", y = "Keep at least 2 meters away from people (%)") +
+  theme_minimal() + scale_y_continuous(labels=scales::percent)
+trabaja
+
+
+normas <- ggplot(norms, aes(y=predicted, x=x)) + geom_point(size=3) + geom_errorbar(aes(ymin=conf.low, ymax=conf.high), size=1, width=0.05) +
+  coord_cartesian(y=c(0,1)) + labs(x = "Perceived Social Norms", y = "Keep at least 2 meters away from people (%)") +
+  theme_minimal() + scale_y_continuous(labels=scales::percent)
+normas
+
+leg_enf <- ggplot(leg, aes(y=predicted, x=x)) + geom_point(size=3) + geom_errorbar(aes(ymin=conf.low, ymax=conf.high), size=1, width=0.05) +
+  coord_cartesian(y=c(0,1)) + labs(x = "Perceived legal enforcement", y = "Keep at least 2 meters away from people (%)") +
+  theme_minimal() + scale_y_continuous(labels=scales::percent)
+leg_enf
+
+risk <- ggplot(riesgo, aes(y=predicted, x=x)) + geom_line(size=1) + geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.3) +
+  coord_cartesian(y=c(0,1)) + labs(x = "Perceived risk COVID", y = "Keep at least 2 meters away from people (%)") +
+  theme_minimal() + scale_y_continuous(labels=scales::percent)
+risk
+
+
+plot2 <- ggarrange(sexo + theme(axis.title.y = element_text(size = 9)), 
+                  edad + theme(axis.title.y = element_text(size =9)), 
+                  trabaja + theme(axis.title.y = element_text(size = 9)), 
+                  risk + theme(axis.title.y = element_text(size = 9)), 
+                  leg_enf + theme(axis.title.y = element_text(size = 9)), 
+                  normas + theme(axis.title.y = element_text(size =9)), 
+                  ncol = 2, nrow = 3,
+                  labels = c("A", "B", "C", "D", "E", "F"))
+plot2
+
+ggsave(
+  plot = plot2,
+  filename = "output/Figures/plot_est_eff_MOVID-impact.png",
+  device = "png",
+  dpi = "retina",
+  units = "cm",
+  width = 18,
+  height = 23)
 
 
