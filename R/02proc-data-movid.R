@@ -43,14 +43,14 @@ movid$semana0 <- ifelse(movid$semana0==-1, 0, movid$semana0)
 
 ## Prev
 
-movid$prev_2categ <- as.factor(ifelse(movid$pr2_prevision=="FONASA",0,
-                                      ifelse(movid$pr2_prevision=="ISAPRE",1,2)))
+movid$prev_2categ <- as.factor(ifelse(movid$pr2_prevision_rec=="FONASA",0,
+                                      ifelse(movid$pr2_prevision_rec=="ISAPRE",1,2)))
 levels(movid$prev_2categ) <- c("FONASA","ISAPRE", "Otro")
 
 
-movid$prev_4categ <- as.factor(ifelse(movid$pr2_prevision=="Ninguna",0,
-                                      ifelse(movid$pr2_prevision=="FONASA",1,
-                                             ifelse(movid$pr2_prevision=="ISAPRE",2,3))))
+movid$prev_4categ <- as.factor(ifelse(movid$pr2_prevision_rec=="Ninguna",0,
+                                      ifelse(movid$pr2_prevision_rec=="FONASA",1,
+                                             ifelse(movid$pr2_prevision_rec=="ISAPRE",2,3))))
 levels(movid$prev_4categ) <- c("Ninguna","FONASA","ISAPRE", "Otro")
 
 ## Work
@@ -147,18 +147,18 @@ movid$sintoma <- ifelse(movid$s1_snt_null==1, 0, movid$sintoma)
 ## Dic Salidas
 movid$salidas_dic <- ifelse(movid$salidas>2,1,0)
 ## Riesgo ordinal
-movid$per_riesgo_ord <- ifelse(movid$per_riesgo=="Muy en desacuerdo",1,
-                              ifelse(movid$per_riesgo=="En desacuerdo",2,
-                                     ifelse(movid$per_riesgo=="Ni de acuerdo ni en desacuerdo",3,
-                                            ifelse(movid$per_riesgo=="De acuerdo",4,
-                                                   ifelse(movid$per_riesgo=="Muy de acuerdo",5,NA)))))
+movid$per_riesgo_ord <- ifelse(movid$riesgo=="Muy en desacuerdo",1,
+                              ifelse(movid$riesgo=="En desacuerdo",2,
+                                     ifelse(movid$riesgo=="Ni de acuerdo ni en desacuerdo",3,
+                                            ifelse(movid$riesgo=="De acuerdo",4,
+                                                   ifelse(movid$riesgo=="Muy de acuerdo",5,NA)))))
 ### Niveles de riesgo
-movid$alto_riesgo <- ifelse(movid$per_riesgo=="Muy de acuerdo" | movid$per_riesgo=="De acuerdo",1,0)
-movid$bajo_riesgo <- ifelse(movid$per_riesgo=="Muy en desacuerdo" | movid$per_riesgo=="En desacuerdo",1,0)
+movid$alto_riesgo <- ifelse(movid$riesgo=="Muy de acuerdo" | movid$riesgo=="De acuerdo",1,0)
+movid$bajo_riesgo <- ifelse(movid$riesgo=="Muy en desacuerdo" | movid$riesgo=="En desacuerdo",1,0)
 
 ## Normas
-movid$cumple_normas <- ifelse(movid$normas=="Completamente" | movid$normas=="En gran medida",1,0)
-movid$nocumple_normas <- ifelse(movid$normas=="Nada" | movid$normas=="Poco" | movid$normas=="Algo",1,0)
+movid$cumple_normas <- ifelse(movid$cr2_normas=="Completamente" | movid$cr2_normas=="En gran medida",1,0)
+movid$nocumple_normas <- ifelse(movid$cr2_normas=="Nada" | movid$cr2_normas=="Poco" | movid$cr2_normas=="Algo",1,0)
 
 
 # 4.Merge data ------------------------------------------------------------
