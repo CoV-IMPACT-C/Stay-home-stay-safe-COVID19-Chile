@@ -1,0 +1,103 @@
+---
+title: "Report MOVID-19 survey"
+subtitle: 'Stay home, stay safe: Why are people in Chile not complying with stay-at-home recommendations and restrictions?<br>ANID-COVID N°960 “CoV-IMPACT-C”'
+author: "by Valentina Andrade"
+lang: es-CL
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: yes
+    depth: 2
+    theme: cerulean
+    number_sections: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = F, warning = F, results = 'asis')
+summarytools::st_options(bootstrap.css     = FALSE,       # Already part of the theme so no need for it
+           plain.ascii       = FALSE,       # One of the essential settings
+           style             = "rmarkdown", # Idem.
+           dfSummary.silent  = TRUE,        # Suppresses messages about temporary files
+           footnote          = NA,          # Keeping the results minimalistic
+           subtitle.emphasis = FALSE)       # For the vignette theme, this gives better results.
+#summarytools::st_css()
+
+library(ggplot2); theme_set(theme_classic() + theme(text = element_text(size = 12)))
+library(knitr);  options(knitr.kable.NA = 'Ausente')
+kable <- function(data) {
+  knitr::kable(data, booktabs = T, digits = 3) %>% kable_styling(latex_options =c("striped", "scale_down"),bootstrap_options = c("striped", "hover", "responsive", "condensed"))
+}
+```
+
+```{r packages, echo = F}
+# 1. Cargar paquetes
+pacman::p_load(tidyverse, kableExtra, sjPlot)
+# 2. Cargar tablas
+movid <- readRDS("../../output/data/movid_proc.rds")
+```
+
+----
+
+El estudio 1 fue desarrollado entre el 27 de julio (semana 31) y 30 de agosto 2020  (semana 35) 
+
+```{r data, echo = F}
+movid.short <- movid %>% filter(!is.na(cr2_normas))
+```
+
+# Número de observaciones en cada ola
+
+Para el año 2020, la semana 31 comienza el 27 de julio y termina el 2 de agosto. Mientras que la semana 35 comienza el 24 de agosto y termina el 30 de agosto. 
+
+Tabla 1. Proporción de participantes por semana 
+```{r}
+movid.short %>%
+  filter(semana %in% c(31:35)) %>% 
+  group_by(semana) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = n/ sum(n)) %>% 
+  kable()
+```
+
+# Participación participantes
+
+Tabla 2. Participación promedio de los participantes según semana y acumulado
+```{r, echo = F}
+ungroup.rowwise_df <- function(x) {
+  class(x) <- c( "tbl_df", "data.frame")
+  x
+}
+movid.short %>%
+    filter(semana %in% c(31:35)) %>% 
+  group_by(pob_id, semana) %>% 
+    summarise(n = n()) %>% 
+  pivot_wider(names_from = semana, values_from = n) %>% 
+  ungroup() %>% 
+  mutate(pob_id = row_number()) %>%
+  rowwise() %>% 
+  mutate(sum_n = sum(across(2:5), na.rm=TRUE)) %>%
+  ungroup() %>% 
+  summarise_at(2:7, ~mean(.x, na.rm = T)) %>% 
+  kable()
+
+```
+
+
+
+Tabla3. Distribución de la participación y ausencia de cada uno de los participantes de MOVID-19 (semana 31 a 35)
+```{r echo = F}
+movid.short %>%
+    filter(semana %in% c(31:35)) %>% 
+  group_by(pob_id, semana) %>% 
+    summarise(n = n()) %>% 
+  pivot_wider(names_from = semana, values_from = n) %>% 
+  ungroup() %>% 
+  mutate(pob_id = row_number()) %>%
+  rowwise() %>% 
+  mutate(sum_n = sum(across(2:5), na.rm=TRUE)) %>% 
+  kable()
+
+```
+
+
+
+
