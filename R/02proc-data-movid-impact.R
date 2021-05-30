@@ -1,6 +1,6 @@
 # Code 3: Proc movid_i-IMPACT ------------------------------------------------------
 # 1. Load packages -----------------------------------------------------
-pacman::p_load(tidyverse)
+  pacman::p_load(tidyverse)
 
 # 2. Load data  -------------------------------------------
 ## movid_i-19
@@ -115,7 +115,6 @@ movid_i <- movid_i %>% mutate(cronicos = case_when(c1_1 == 1 ~ 1,
                                                    c1_2 == 1 ~ 1,
                                                    c1_3 == 1 ~ 1,
                                                    c1_4 == 1 ~ 1,
-                                                   c1_5 == 1 ~ 1,
                                                    c1_6_esp %in% c("artritis", "artritis reumatoide, fibromialgia") ~ 1,
                                                    c1_7 == 1 ~ 0,
                                                    c1_8 == 1 ~ NA_real_,
@@ -186,20 +185,20 @@ table(movid_i$f6)
 table(movid_i$per_risk)
 
 ### Levels de riesgo
-movid_i$high_risk <- ifelse(movid_i$per_risk=="Strongly agree" | movid_i$per_risk=="Agree",1,0)
-movid_i$low_risk <- ifelse(movid_i$per_risk=="Strongly disagree" | movid_i$per_risk=="Disagree",1,0)
+movid_i$high_risk <- ifelse(movid_i$per_risk=="Extremely dangerous" | movid_i$per_risk=="Very dangerous",1,0)
+movid_i$low_risk <- ifelse(movid_i$per_risk=="Not at all dangerous" | movid_i$per_risk=="Somewhat dangerous" | movid_i$per_risk=="Pretty dangerous",1,0)
 
 # B. Legal enforcement  (f5.5) --------------------------------------------
 ### ‘In Chile, if any person goes out without permission during a lockdown, it is very unlikely that this person will be inspected and punished.’
 
-movid_i$leg_enforce <- car::recode(movid_i$f5_5, c("1='Strongly agree';2='Agree';3='Indifferent';4='Disagree';5='Strongly disagree';c(8,9)=NA"), as.factor = T,
-                                 levels = c("Strongly agree", "Agree", "Indifferent", "Disagree", "Strongly disagree"))
+movid_i$leg_enforce <- car::recode(movid_i$f5_5, c("1='Strongly disagree';2='Disagree';3='Indifferent';4='Agree';5='Strongly agree';c(8,9)=NA"), as.factor = T,
+                                 levels = c("Strongly disagree", "Disagree", "Indifferent", "Agree", "Strongly agree"))
 
-table(movid_i$leg_enforce)
+table(movid_i$low_leg)
 
 ### Levels leg enforcement
-movid_i$high_leg <- ifelse(movid_i$leg_enforce=="Pretty dangerous" | movid_i$leg_enforce=="Very dangerous"| movid_i$leg_enforce=="Extremely dangerous",1,0)
-movid_i$low_leg <- ifelse(movid_i$leg_enforce=="Not at all dangerous" | movid_i$leg_enforce=="Somewhat dangerous",1,0)
+movid_i$high_leg <- ifelse(movid_i$leg_enforce=="Strongly agree" | movid_i$leg_enforce=="Agree",1,0)
+movid_i$low_leg <- ifelse(movid_i$leg_enforce=="Strongly disagree" | movid_i$leg_enforce=="Disagree" | movid_i$leg_enforce=="Indifferent",1,0)
 
 
 # 4. Normative factors  -----------------------------------------------
@@ -216,20 +215,20 @@ table(movid_i$normas)
 
 ## Normas
 movid_i$cumple_normas <- ifelse(movid_i$normas=="Completely" | movid_i$normas=="Mostly",1,0)
-movid_i$nocumple_normas <- ifelse(movid_i$normas=="Not at all" | movid_i$normas=="A little" | movid_i$normas=="Algo",1,0)
+movid_i$nocumple_normas <- ifelse(movid_i$normas=="Not at all" | movid_i$normas=="A little" | movid_i$normas=="Somewhat" | movid_i$normas=="Very much",1,0)
 
 # B. Legitimacy (f3.3) ----------------------------------------------------
 ### Even if we sometimes disagree with the health authorities and the measures they propose, it is our duty to accuratly follow their indications.
 
-movid_i$soc1_bienestar <- car::recode(movid_i$f3_2, c("1='Strongly agree';2='Agree';3='Indifferent';4='Disagree';5='Strongly disagree';c(8,9)=NA"), as.factor = T,
-                                  levels = c("Strongly agree", "Agree", "Indifferent", "Disagree", "Strongly disagree"))
+movid_i$soc1_bienestar <- car::recode(movid_i$f3_2, c("1='Strongly disagree';2='Disagree';3='Indifferent';4='Agree';5='Strongly agree';c(8,9)=NA"), as.factor = T,
+                                      levels = c("Strongly disagree", "Disagree", "Indifferent", "Agree", "Strongly agree"))
 
-movid_i$soc2_obedecer <- car::recode(movid_i$f3_3, c("1='Strongly agree';2='Agree';3='Indifferent';4='Disagree';5='Strongly disagree';c(8,9)=NA"), as.factor = T,
-                                   levels = c("Strongly agree", "Agree", "Indifferent", "Disagree", "Strongly disagree"))
+movid_i$soc2_obedecer <- car::recode(movid_i$f3_3, c("1='Strongly disagree';2='Disagree';3='Indifferent';4='Agree';5='Strongly agree';c(8,9)=NA"), as.factor = T,
+                                     levels = c("Strongly disagree", "Disagree", "Indifferent", "Agree", "Strongly agree"))
 
 #soc2_obedecer
-movid_i$soc3_gob <- car::recode(movid_i$f3_4, c("1='Strongly agree';2='Agree';3='Indifferent';4='Disagree';5='Strongly disagree';c(8,9)=NA"), as.factor = T,
-                                     levels = c("Strongly agree", "Agree", "Indifferent", "Disagree", "Strongly disagree"))
+movid_i$soc3_gob <- car::recode(movid_i$f3_4, c("1='Strongly disagree';2='Disagree';3='Indifferent';4='Agree';5='Strongly agree';c(8,9)=NA"), as.factor = T,
+                                levels = c("Strongly disagree", "Disagree", "Indifferent", "Agree", "Strongly agree"))
 
 table(movid_i$f3_3)
 table(movid_i$soc2_obedecer)
